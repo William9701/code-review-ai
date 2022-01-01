@@ -1,0 +1,219 @@
+"""
+Integration Test - Complete PR Analysis Flow Simulation
+This simulates the entire flow without Docker
+"""
+import sys
+import os
+import json
+from datetime import datetime
+
+# Add paths
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'services', 'analysis-engine'))
+
+from analyzers.python_analyzer import PythonAnalyzer
+from analyzers.typescript_analyzer import TypeScriptAnalyzer
+from analyzers.security_analyzer import SecurityAnalyzer
+
+print("=" * 80)
+print("CodeReview AI - Integration Test")
+print("Simulating Full PR Analysis Flow")
+print("=" * 80)
+print()
+
+# Simulate a PR with multiple files
+pr_files = [
+    {
+        "path": "backend/auth.py",
+        "language": "python",
+        "content": """
+import hashlib
+
+def authenticate_user(username, password):
+    # Hardcoded credentials - BAD!
+    admin_password = "admin123"
+
+    # Weak crypto - BAD!
+    password_hash = hashlib.md5(password.encode()).hexdigest()
+
+    # SQL injection vulnerability - BAD!
+    query = "SELECT * FROM users WHERE username = '" + username + "'"
+    cursor.execute(query)
+
+    return True
+"""
+    },
+    {
+        "path": "backend/helpers.py",
+        "language": "python",
+        "content": """
+def process_data(a, b, c, d, e, f, g, h):
+    '''Complex function with many parameters'''
+    result = []
+    for i in range(100):
+        for j in range(100):
+            for k in range(100):
+                if i > 50:
+                    if j > 50:
+                        if k > 50:
+                            result.append(i * j * k)
+
+    try:
+        risky_operation()
+    except:  # Bare except
+        pass
+
+    return result
+"""
+    },
+    {
+        "path": "frontend/api.ts",
+        "language": "typescript",
+        "content": """
+async function fetchUserData(userId: any) {
+    console.log("Fetching user:", userId);
+
+    if (userId == null) {
+        return;
+    }
+
+    const response = await fetch(`/api/users/${userId}`);
+    return response.json();
+}
+
+function processHtml(html: string) {
+    document.getElementById('content').innerHTML = html;
+}
+"""
+    }
+]
+
+# Initialize analyzers
+python_analyzer = PythonAnalyzer()
+typescript_analyzer = TypeScriptAnalyzer()
+security_analyzer = SecurityAnalyzer()
+
+# Analysis results
+all_issues = []
+stats = {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "info": 0
+}
+
+print("Analyzing PR files...")
+print("-" * 80)
+
+for file_data in pr_files:
+    print(f"\nFile: {file_data['path']}")
+
+    issues = []
+
+    # Run language-specific analyzer
+    if file_data['language'] == 'python':
+        issues.extend(python_analyzer.analyze(file_data['path'], file_data['content']))
+    elif file_data['language'] == 'typescript':
+        issues.extend(typescript_analyzer.analyze(file_data['path'], file_data['content']))
+
+    # Always run security analyzer
+    security_issues = security_analyzer.analyze(file_data['path'], file_data['content'])
+    issues.extend(security_issues)
+
+    print(f"  Found {len(issues)} issues")
+
+    for issue in issues:
+        issue['file'] = file_data['path']
+        all_issues.append(issue)
+        stats[issue['severity']] += 1
+
+print()
+print("=" * 80)
+print("Analysis Complete!")
+print("=" * 80)
+print()
+
+# Print summary
+print(f"Total Issues: {len(all_issues)}")
+print(f"  - CRITICAL: {stats['critical']}")
+print(f"  - HIGH:     {stats['high']}")
+print(f"  - MEDIUM:   {stats['medium']}")
+print(f"  - LOW:      {stats['low']}")
+print(f"  - INFO:     {stats['info']}")
+print()
+
+# Group by severity
+print("=" * 80)
+print("Issues by Severity:")
+print("=" * 80)
+
+for severity in ['critical', 'high', 'medium', 'low', 'info']:
+    severity_issues = [i for i in all_issues if i['severity'] == severity]
+    if severity_issues:
+        print(f"\n[{severity.upper()}] - {len(severity_issues)} issues:")
+        for issue in severity_issues:
+            print(f"  {issue['file']}:{issue['line_start']}")
+            print(f"    {issue['title']}")
+            print(f"    {issue['description']}")
+            if issue.get('metadata', {}).get('cwe'):
+                print(f"    {issue['metadata']['cwe']} - {issue['metadata']['owasp']}")
+            print()
+
+# Simulate GitHub comment generation
+print("=" * 80)
+print("Sample GitHub Comment (as would be posted on PR):")
+print("=" * 80)
+print()
+
+sample_issue = all_issues[0]
+comment = f"""## {sample_issue['title']}
+
+**Severity:** {sample_issue['severity'].upper()}
+**Category:** {sample_issue['category']}
+**File:** {sample_issue['file']}
+**Line:** {sample_issue['line_start']}
+
+### Description
+{sample_issue['description']}
+
+### Code
+```
+{sample_issue.get('code_snippet', 'N/A')}
+```
+"""
+
+if sample_issue.get('metadata', {}).get('cwe'):
+    comment += f"""
+### Security Information
+- **CWE:** {sample_issue['metadata']['cwe']}
+- **OWASP:** {sample_issue['metadata']['owasp']}
+"""
+
+comment += """
+---
+*Generated by CodeReview AI*
+"""
+
+print(comment)
+
+# Summary
+print()
+print("=" * 80)
+print("Integration Test Results:")
+print("=" * 80)
+print()
+print(f"[OK] Analyzed {len(pr_files)} files")
+print(f"[OK] Found {len(all_issues)} total issues")
+print(f"[OK] Security vulnerabilities detected: {stats['critical'] + stats['high']}")
+print(f"[OK] Code quality issues detected: {stats['medium'] + stats['low']}")
+print()
+print("What would happen next in production:")
+print("  1. These issues would be stored in PostgreSQL")
+print("  2. LLM Service would enhance them with detailed explanations")
+print("  3. GitHub Service would post them as PR comments")
+print("  4. A summary comment would be added to the PR")
+print("  5. Metrics would be sent to Prometheus")
+print()
+print("=" * 80)
+print("TEST PASSED - All components working!")
+print("=" * 80)

@@ -1,11 +1,13 @@
 """
 Message queue abstraction for RabbitMQ
 """
-import os
+
 import json
 import logging
-from typing import Callable, Any, Optional, Dict
+import os
 from functools import wraps
+from typing import Any, Callable, Dict, Optional
+
 import pika
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.spec import Basic, BasicProperties
@@ -26,8 +28,7 @@ class MessageQueue:
             connection_url: RabbitMQ connection URL (amqp://user:pass@host:port/)
         """
         self.connection_url = connection_url or os.getenv(
-            "RABBITMQ_URL",
-            "amqp://codereview:changeme@localhost:5672/"
+            "RABBITMQ_URL", "amqp://codereview:changeme@localhost:5672/"
         )
         self.connection: Optional[pika.BlockingConnection] = None
         self.channel: Optional[BlockingChannel] = None
@@ -68,9 +69,7 @@ class MessageQueue:
 
         for exchange_name, exchange_type in exchanges:
             self.channel.exchange_declare(
-                exchange=exchange_name,
-                exchange_type=exchange_type,
-                durable=True
+                exchange=exchange_name, exchange_type=exchange_type, durable=True
             )
 
     def _declare_queues(self) -> None:
@@ -83,20 +82,16 @@ class MessageQueue:
             "webhook.pr.opened",
             "webhook.pr.synchronized",
             "webhook.pr.closed",
-
             # Analysis queues
             "analysis.static",
             "analysis.llm",
             "analysis.results",
-
             # GitHub operations
             "github.comments",
             "github.status",
-
             # Notifications
             "notifications.email",
             "notifications.slack",
-
             # Dead letter queue
             "dlq",
         ]
@@ -108,7 +103,7 @@ class MessageQueue:
                 arguments={
                     "x-message-ttl": 86400000,  # 24 hours
                     "x-max-length": 10000,
-                }
+                },
             )
 
         # Bind queues to exchanges
@@ -132,9 +127,7 @@ class MessageQueue:
 
         for queue, exchange, routing_key in bindings:
             self.channel.queue_bind(
-                queue=queue,
-                exchange=exchange,
-                routing_key=routing_key
+                queue=queue, exchange=exchange, routing_key=routing_key
             )
 
     def publish(
@@ -142,7 +135,7 @@ class MessageQueue:
         exchange: str,
         routing_key: str,
         message: Dict[str, Any],
-        priority: int = 5
+        priority: int = 5,
     ) -> None:
         """
         Publish message to exchange
@@ -167,7 +160,7 @@ class MessageQueue:
                 exchange=exchange,
                 routing_key=routing_key,
                 body=json.dumps(message),
-                properties=properties
+                properties=properties,
             )
 
             logger.debug(f"Published message to {exchange}/{routing_key}")
@@ -179,7 +172,7 @@ class MessageQueue:
         self,
         queue: str,
         callback: Callable[[Dict[str, Any]], None],
-        prefetch_count: int = 1
+        prefetch_count: int = 1,
     ) -> None:
         """
         Consume messages from queue
@@ -198,7 +191,7 @@ class MessageQueue:
             ch: BlockingChannel,
             method: Basic.Deliver,
             properties: BasicProperties,
-            body: bytes
+            body: bytes,
         ) -> None:
             """Message handler"""
             try:
@@ -217,10 +210,7 @@ class MessageQueue:
                 logger.error(f"Error processing message: {e}")
                 ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
-        self.channel.basic_consume(
-            queue=queue,
-            on_message_callback=on_message
-        )
+        self.channel.basic_consume(queue=queue, on_message_callback=on_message)
 
         logger.info(f"Started consuming from {queue}")
         self.channel.start_consuming()
@@ -260,6 +250,7 @@ def queue_task(exchange: str, routing_key: str):
         def analyze_python_code(code: str):
             return {"result": "..."}
     """
+
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -267,5 +258,7 @@ def queue_task(exchange: str, routing_key: str):
             queue = get_message_queue()
             queue.publish(exchange, routing_key, result)
             return result
+
         return wrapper
+
     return decorator

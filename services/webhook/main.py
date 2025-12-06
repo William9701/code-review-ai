@@ -1,21 +1,23 @@
 """
 Webhook Service - Handles GitHub webhook events
 """
-import os
-import hmac
+
 import hashlib
-from typing import Optional, Dict, Any
-from fastapi import FastAPI, Request, HTTPException, Header, Depends, status
+import hmac
+import os
+import sys
+from typing import Any, Dict, Optional
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-import sys
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from shared.database import get_db, Repository, PullRequest
-from shared.messaging import get_message_queue, MessageQueue
-from shared.logging import setup_logging, get_logger
+from shared.database import PullRequest, Repository, get_db
+from shared.logging import get_logger, setup_logging
+from shared.messaging import MessageQueue, get_message_queue
 
 # Setup logging
 setup_logging(service_name="webhook-service")
@@ -25,7 +27,7 @@ logger = get_logger(__name__)
 app = FastAPI(
     title="CodeReview AI - Webhook Service",
     description="Handles GitHub webhook events",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Get webhook secret
@@ -56,9 +58,7 @@ def verify_signature(payload: bytes, signature: str) -> bool:
 
     # Calculate expected signature
     expected_signature = hmac.new(
-        GITHUB_WEBHOOK_SECRET.encode(),
-        payload,
-        hashlib.sha256
+        GITHUB_WEBHOOK_SECRET.encode(), payload, hashlib.sha256
     ).hexdigest()
 
     return hmac.compare_digest(expected_signature, signature)
@@ -92,7 +92,7 @@ async def handle_github_webhook(
     x_github_event: Optional[str] = Header(None),
     x_hub_signature_256: Optional[str] = Header(None),
     x_github_delivery: Optional[str] = Header(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Handle GitHub webhook events
@@ -124,8 +124,8 @@ async def handle_github_webhook(
         extra={
             "event_type": x_github_event,
             "delivery_id": x_github_delivery,
-            "action": event_data.get("action")
-        }
+            "action": event_data.get("action"),
+        },
     )
 
     # Route event to appropriate handler
@@ -163,9 +163,9 @@ async def handle_pull_request_event(event_data: Dict[str, Any], db: Session):
     installation_id = event_data.get("installation", {}).get("id")
 
     # Get or create repository
-    repository = db.query(Repository).filter(
-        Repository.github_id == repo_data.get("id")
-    ).first()
+    repository = (
+        db.query(Repository).filter(Repository.github_id == repo_data.get("id")).first()
+    )
 
     if not repository:
         repository = Repository(
@@ -174,16 +174,16 @@ async def handle_pull_request_event(event_data: Dict[str, Any], db: Session):
             full_name=repo_data.get("full_name"),
             owner=repo_data.get("owner", {}).get("login"),
             installation_id=installation_id,
-            default_branch=repo_data.get("default_branch", "main")
+            default_branch=repo_data.get("default_branch", "main"),
         )
         db.add(repository)
         db.commit()
         logger.info(f"Created repository: {repository.full_name}")
 
     # Get or create pull request
-    pull_request = db.query(PullRequest).filter(
-        PullRequest.github_id == pr_data.get("id")
-    ).first()
+    pull_request = (
+        db.query(PullRequest).filter(PullRequest.github_id == pr_data.get("id")).first()
+    )
 
     if not pull_request:
         pull_request = PullRequest(
@@ -201,7 +201,7 @@ async def handle_pull_request_event(event_data: Dict[str, Any], db: Session):
             is_draft=pr_data.get("draft", False),
             files_changed=pr_data.get("changed_files", 0),
             additions=pr_data.get("additions", 0),
-            deletions=pr_data.get("deletions", 0)
+            deletions=pr_data.get("deletions", 0),
         )
         db.add(pull_request)
     else:
@@ -228,7 +228,7 @@ async def handle_pull_request_event(event_data: Dict[str, Any], db: Session):
             "pr_number": pull_request.pr_number,
             "head_sha": pull_request.head_sha,
             "installation_id": installation_id,
-            "action": action
+            "action": action,
         }
 
         routing_key = f"pr.{action}"
@@ -239,8 +239,8 @@ async def handle_pull_request_event(event_data: Dict[str, Any], db: Session):
             extra={
                 "action": action,
                 "pr_number": pull_request.pr_number,
-                "repository": repository.full_name
-            }
+                "repository": repository.full_name,
+            },
         )
 
 
@@ -263,7 +263,7 @@ async def handle_installation_event(event_data: Dict[str, Any], db: Session):
 
     logger.info(
         f"GitHub App installation {action}",
-        extra={"installation_id": installation_id, "action": action}
+        extra={"installation_id": installation_id, "action": action},
     )
 
     if action == "created":
@@ -274,8 +274,10 @@ async def handle_installation_event(event_data: Dict[str, Any], db: Session):
                 github_id=repo_data.get("id"),
                 name=repo_data.get("name"),
                 full_name=repo_data.get("full_name"),
-                owner=event_data.get("installation", {}).get("account", {}).get("login"),
-                installation_id=installation_id
+                owner=event_data.get("installation", {})
+                .get("account", {})
+                .get("login"),
+                installation_id=installation_id,
             )
             db.add(repository)
 
@@ -283,7 +285,9 @@ async def handle_installation_event(event_data: Dict[str, Any], db: Session):
         logger.info(f"Added {len(repositories)} repositories")
 
 
-async def handle_installation_repositories_event(event_data: Dict[str, Any], db: Session):
+async def handle_installation_repositories_event(
+    event_data: Dict[str, Any], db: Session
+):
     """Handle installation_repositories event"""
     action = event_data.get("action")
     installation_id = event_data.get("installation", {}).get("id")
@@ -295,8 +299,10 @@ async def handle_installation_repositories_event(event_data: Dict[str, Any], db:
                 github_id=repo_data.get("id"),
                 name=repo_data.get("name"),
                 full_name=repo_data.get("full_name"),
-                owner=event_data.get("installation", {}).get("account", {}).get("login"),
-                installation_id=installation_id
+                owner=event_data.get("installation", {})
+                .get("account", {})
+                .get("login"),
+                installation_id=installation_id,
             )
             db.add(repository)
 
@@ -306,4 +312,5 @@ async def handle_installation_repositories_event(event_data: Dict[str, Any], db:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

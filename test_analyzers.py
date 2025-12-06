@@ -1,15 +1,18 @@
 """
 Quick test to demonstrate the code analyzers work
 """
-import sys
+
 import os
+import sys
 
 # Add paths
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'services', 'analysis-engine'))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "services", "analysis-engine")
+)
 
 from analyzers.python_analyzer import PythonAnalyzer
-from analyzers.typescript_analyzer import TypeScriptAnalyzer
 from analyzers.security_analyzer import SecurityAnalyzer
+from analyzers.typescript_analyzer import TypeScriptAnalyzer
 
 print("=" * 80)
 print("CodeReview AI - Analyzer Test")
@@ -106,7 +109,7 @@ print(f"Found {len(security_issues)} Security issues:")
 for issue in security_issues:
     print(f"  • [{issue['severity'].upper()}] {issue['title']}")
     print(f"    Line {issue['line_start']}: {issue['description']}")
-    if 'metadata' in issue and 'cwe' in issue['metadata']:
+    if "metadata" in issue and "cwe" in issue["metadata"]:
         print(f"    CWE: {issue['metadata']['cwe']}")
         print(f"    OWASP: {issue['metadata']['owasp']}")
     print()
@@ -115,7 +118,9 @@ for issue in security_issues:
 print("=" * 80)
 print("[SUCCESS] All analyzers working correctly!")
 print()
-print(f"Total issues found: {len(python_issues) + len(ts_issues) + len(security_issues)}")
+print(
+    f"Total issues found: {len(python_issues) + len(ts_issues) + len(security_issues)}"
+)
 print(f"  - Python issues: {len(python_issues)}")
 print(f"  - TypeScript issues: {len(ts_issues)}")
 print(f"  - Security issues: {len(security_issues)}")

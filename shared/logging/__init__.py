@@ -1,16 +1,7 @@
 """
 Logging shared module
 """
-from .logger import (
-    setup_logging,
-    get_logger,
-    get_logger_with_context,
-    LoggerAdapter
-)
 
-__all__ = [
-    "setup_logging",
-    "get_logger",
-    "get_logger_with_context",
-    "LoggerAdapter"
-]
+from .logger import LoggerAdapter, get_logger, get_logger_with_context, setup_logging
+
+__all__ = ["setup_logging", "get_logger", "get_logger_with_context", "LoggerAdapter"]

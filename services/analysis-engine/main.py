@@ -1,25 +1,30 @@
 """
 Analysis Engine Service - Performs static code analysis
 """
+
 import os
 import sys
-import json
-from typing import Dict, Any, List
 from datetime import datetime
+from typing import Any, Dict, List
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from shared.database import (
-    get_db_context, Analysis, Issue, PullRequest,
-    AnalysisStatus, IssueSeverity, IssueCategory
-)
-from shared.messaging import get_message_queue
-from shared.logging import setup_logging, get_logger
-
 from analyzers.python_analyzer import PythonAnalyzer
-from analyzers.typescript_analyzer import TypeScriptAnalyzer
 from analyzers.security_analyzer import SecurityAnalyzer
+from analyzers.typescript_analyzer import TypeScriptAnalyzer
+
+from shared.database import (
+    Analysis,
+    AnalysisStatus,
+    Issue,
+    IssueCategory,
+    IssueSeverity,
+    PullRequest,
+    get_db_context,
+)
+from shared.logging import get_logger, setup_logging
+from shared.messaging import get_message_queue
 
 # Setup logging
 setup_logging(service_name="analysis-engine")
@@ -35,7 +40,7 @@ class AnalysisEngine:
         self.analyzers = {
             "python": PythonAnalyzer(),
             "typescript": TypeScriptAnalyzer(),
-            "security": SecurityAnalyzer()
+            "security": SecurityAnalyzer(),
         }
 
     def analyze_pull_request(self, message: Dict[str, Any]) -> None:
@@ -54,16 +59,18 @@ class AnalysisEngine:
             extra={
                 "pull_request_id": pull_request_id,
                 "pr_number": pr_number,
-                "head_sha": head_sha
-            }
+                "head_sha": head_sha,
+            },
         )
 
         try:
             with get_db_context() as db:
                 # Get pull request
-                pull_request = db.query(PullRequest).filter(
-                    PullRequest.id == pull_request_id
-                ).first()
+                pull_request = (
+                    db.query(PullRequest)
+                    .filter(PullRequest.id == pull_request_id)
+                    .first()
+                )
 
                 if not pull_request:
                     logger.error(f"Pull request not found: {pull_request_id}")
@@ -73,7 +80,7 @@ class AnalysisEngine:
                 analysis = Analysis(
                     pull_request_id=pull_request_id,
                     status=AnalysisStatus.IN_PROGRESS,
-                    started_at=datetime.utcnow()
+                    started_at=datetime.utcnow(),
                 )
                 db.add(analysis)
                 db.commit()
@@ -85,9 +92,7 @@ class AnalysisEngine:
 
             # Save results to database
             with get_db_context() as db:
-                analysis = db.query(Analysis).filter(
-                    Analysis.id == analysis_id
-                ).first()
+                analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
 
                 # Save issues
                 for issue_data in issues:
@@ -106,7 +111,7 @@ class AnalysisEngine:
                         code_snippet=issue_data.get("code_snippet"),
                         suggested_fix=issue_data.get("suggested_fix"),
                         references=issue_data.get("references"),
-                        metadata=issue_data.get("metadata")
+                        metadata=issue_data.get("metadata"),
                     )
                     db.add(issue)
 
@@ -117,21 +122,17 @@ class AnalysisEngine:
                 analysis.critical_issues = sum(
                     1 for i in issues if i["severity"] == "critical"
                 )
-                analysis.high_issues = sum(
-                    1 for i in issues if i["severity"] == "high"
-                )
+                analysis.high_issues = sum(1 for i in issues if i["severity"] == "high")
                 analysis.medium_issues = sum(
                     1 for i in issues if i["severity"] == "medium"
                 )
-                analysis.low_issues = sum(
-                    1 for i in issues if i["severity"] == "low"
-                )
-                analysis.info_issues = sum(
-                    1 for i in issues if i["severity"] == "info"
-                )
+                analysis.low_issues = sum(1 for i in issues if i["severity"] == "low")
+                analysis.info_issues = sum(1 for i in issues if i["severity"] == "info")
 
                 if analysis.started_at and analysis.completed_at:
-                    duration = (analysis.completed_at - analysis.started_at).total_seconds()
+                    duration = (
+                        analysis.completed_at - analysis.started_at
+                    ).total_seconds()
                     analysis.analysis_duration_seconds = duration
 
                 db.commit()
@@ -145,8 +146,8 @@ class AnalysisEngine:
                     "analysis_id": analysis_id,
                     "pull_request_id": pull_request_id,
                     "total_issues": len(issues),
-                    "requires_llm_review": len(issues) > 0
-                }
+                    "requires_llm_review": len(issues) > 0,
+                },
             )
 
             logger.info(
@@ -154,18 +155,18 @@ class AnalysisEngine:
                 extra={
                     "analysis_id": analysis_id,
                     "total_issues": len(issues),
-                    "duration_seconds": analysis.analysis_duration_seconds
-                }
+                    "duration_seconds": analysis.analysis_duration_seconds,
+                },
             )
 
         except Exception as e:
             logger.error(f"Analysis failed: {e}", exc_info=True)
             # Mark analysis as failed
             with get_db_context() as db:
-                if 'analysis_id' in locals():
-                    analysis = db.query(Analysis).filter(
-                        Analysis.id == analysis_id
-                    ).first()
+                if "analysis_id" in locals():
+                    analysis = (
+                        db.query(Analysis).filter(Analysis.id == analysis_id).first()
+                    )
                     if analysis:
                         analysis.status = AnalysisStatus.FAILED
                         analysis.error_message = str(e)
@@ -190,7 +191,11 @@ class AnalysisEngine:
         # Mock file analysis
         mock_files = [
             {"path": "src/main.py", "content": "# Python code", "language": "python"},
-            {"path": "src/utils.ts", "content": "// TypeScript code", "language": "typescript"}
+            {
+                "path": "src/utils.ts",
+                "content": "// TypeScript code",
+                "language": "typescript",
+            },
         ]
 
         for file_data in mock_files:
@@ -198,19 +203,13 @@ class AnalysisEngine:
 
             if language in self.analyzers:
                 analyzer = self.analyzers[language]
-                issues = analyzer.analyze(
-                    file_data["path"],
-                    file_data["content"]
-                )
+                issues = analyzer.analyze(file_data["path"], file_data["content"])
                 all_issues.extend(issues)
 
         # Run security analyzer on all files
         security_analyzer = self.analyzers["security"]
         for file_data in mock_files:
-            issues = security_analyzer.analyze(
-                file_data["path"],
-                file_data["content"]
-            )
+            issues = security_analyzer.analyze(file_data["path"], file_data["content"])
             all_issues.extend(issues)
 
         return all_issues

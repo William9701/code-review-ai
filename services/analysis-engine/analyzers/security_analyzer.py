@@ -1,8 +1,9 @@
 """
 Security vulnerability analyzer
 """
+
 import re
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 
 class SecurityAnalyzer:
@@ -24,7 +25,7 @@ class SecurityAnalyzer:
                 "severity": "critical",
                 "title": "Potential SQL Injection",
                 "description": "SQL query constructed using string concatenation or formatting. Use parameterized queries instead.",
-                "cwe": "CWE-89"
+                "cwe": "CWE-89",
             },
             "hardcoded_secret": {
                 "patterns": [
@@ -36,72 +37,72 @@ class SecurityAnalyzer:
                 "severity": "critical",
                 "title": "Hardcoded Secret",
                 "description": "Hardcoded credential detected. Use environment variables or a secrets manager.",
-                "cwe": "CWE-798"
+                "cwe": "CWE-798",
             },
             "path_traversal": {
                 "patterns": [
-                    r'open\s*\(\s*[^)]*\+',
-                    r'readFile\s*\(\s*[^)]*\+',
-                    r'\.\./',
+                    r"open\s*\(\s*[^)]*\+",
+                    r"readFile\s*\(\s*[^)]*\+",
+                    r"\.\./",
                 ],
                 "severity": "high",
                 "title": "Potential Path Traversal",
                 "description": "File path constructed from user input without validation.",
-                "cwe": "CWE-22"
+                "cwe": "CWE-22",
             },
             "weak_crypto": {
                 "patterns": [
-                    r'hashlib\.md5',
-                    r'hashlib\.sha1',
-                    r'DES|RC4|MD5|SHA1',
+                    r"hashlib\.md5",
+                    r"hashlib\.sha1",
+                    r"DES|RC4|MD5|SHA1",
                 ],
                 "severity": "high",
                 "title": "Weak Cryptographic Algorithm",
                 "description": "Using weak cryptographic algorithm. Use SHA-256 or stronger.",
-                "cwe": "CWE-327"
+                "cwe": "CWE-327",
             },
             "xss": {
                 "patterns": [
-                    r'dangerouslySetInnerHTML',
-                    r'innerHTML\s*=',
-                    r'document\.write\s*\(',
+                    r"dangerouslySetInnerHTML",
+                    r"innerHTML\s*=",
+                    r"document\.write\s*\(",
                 ],
                 "severity": "high",
                 "title": "Potential XSS Vulnerability",
                 "description": "Direct HTML manipulation can lead to XSS attacks. Sanitize user input.",
-                "cwe": "CWE-79"
+                "cwe": "CWE-79",
             },
             "eval_usage": {
                 "patterns": [
-                    r'\beval\s*\(',
-                    r'exec\s*\(',
-                    r'Function\s*\(',
+                    r"\beval\s*\(",
+                    r"exec\s*\(",
+                    r"Function\s*\(",
                 ],
                 "severity": "high",
                 "title": "Use of eval() or exec()",
                 "description": "Using eval() or exec() can lead to code injection. Avoid if possible.",
-                "cwe": "CWE-95"
+                "cwe": "CWE-95",
             },
             "insecure_random": {
                 "patterns": [
-                    r'Math\.random\s*\(',
-                    r'random\.random\s*\(',
+                    r"Math\.random\s*\(",
+                    r"random\.random\s*\(",
                 ],
                 "severity": "medium",
                 "title": "Insecure Random Number Generation",
                 "description": "Using non-cryptographic random for security purposes. Use crypto.randomBytes() or secrets module.",
-                "cwe": "CWE-330"
+                "cwe": "CWE-330",
             },
             "debug_mode": {
                 "patterns": [
-                    r'DEBUG\s*=\s*True',
-                    r'debug:\s*true',
+                    r"DEBUG\s*=\s*True",
+                    r"debug:\s*true",
                 ],
                 "severity": "medium",
                 "title": "Debug Mode Enabled",
                 "description": "Debug mode should be disabled in production.",
-                "cwe": "CWE-489"
-            }
+                "cwe": "CWE-489",
+            },
         }
 
     def analyze(self, file_path: str, content: str) -> List[Dict[str, Any]]:
@@ -116,29 +117,37 @@ class SecurityAnalyzer:
             List of security issues found
         """
         issues = []
-        lines = content.split('\n')
+        lines = content.split("\n")
 
         for rule_id, rule_config in self.patterns.items():
             for pattern in rule_config["patterns"]:
                 for i, line in enumerate(lines, 1):
                     if re.search(pattern, line, re.IGNORECASE):
-                        issues.append({
-                            "file_path": file_path,
-                            "line_start": i,
-                            "severity": rule_config["severity"],
-                            "category": "security",
-                            "rule_id": f"security_{rule_id}",
-                            "title": rule_config["title"],
-                            "description": rule_config["description"],
-                            "code_snippet": line.strip(),
-                            "metadata": {
-                                "cwe": rule_config.get("cwe"),
-                                "owasp": self._get_owasp_category(rule_id)
-                            },
-                            "references": [
-                                {"url": f"https://cwe.mitre.org/data/definitions/{rule_config.get('cwe', '').replace('CWE-', '')}.html"}
-                            ] if rule_config.get("cwe") else []
-                        })
+                        issues.append(
+                            {
+                                "file_path": file_path,
+                                "line_start": i,
+                                "severity": rule_config["severity"],
+                                "category": "security",
+                                "rule_id": f"security_{rule_id}",
+                                "title": rule_config["title"],
+                                "description": rule_config["description"],
+                                "code_snippet": line.strip(),
+                                "metadata": {
+                                    "cwe": rule_config.get("cwe"),
+                                    "owasp": self._get_owasp_category(rule_id),
+                                },
+                                "references": (
+                                    [
+                                        {
+                                            "url": f"https://cwe.mitre.org/data/definitions/{rule_config.get('cwe', '').replace('CWE-', '')}.html"
+                                        }
+                                    ]
+                                    if rule_config.get("cwe")
+                                    else []
+                                ),
+                            }
+                        )
 
         return issues
 
@@ -152,6 +161,6 @@ class SecurityAnalyzer:
             "xss": "A03:2021 - Injection",
             "eval_usage": "A03:2021 - Injection",
             "insecure_random": "A02:2021 - Cryptographic Failures",
-            "debug_mode": "A05:2021 - Security Misconfiguration"
+            "debug_mode": "A05:2021 - Security Misconfiguration",
         }
         return owasp_mapping.get(rule_id, "")

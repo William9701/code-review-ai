@@ -1,19 +1,20 @@
 """
 Database connection management
 """
+
 import os
-from typing import Generator
 from contextlib import contextmanager
+from typing import Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool
 
 from .models import Base
 
 # Get database URL from environment
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://codereview:changeme@127.0.0.1:5432/codereview"
+    "DATABASE_URL", "postgresql://codereview:changeme@127.0.0.1:5432/codereview"
 )
 
 # Create engine with connection pooling
@@ -28,11 +29,7 @@ engine = create_engine(
 )
 
 # Create session factory
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
 def init_db() -> None:

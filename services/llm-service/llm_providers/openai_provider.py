@@ -1,8 +1,10 @@
 """
 OpenAI LLM Provider
 """
+
 import os
 from typing import Optional
+
 from openai import OpenAI
 
 
@@ -35,21 +37,15 @@ class OpenAIProvider:
         messages = []
 
         if system_prompt:
-            messages.append({
-                "role": "system",
-                "content": system_prompt
-            })
+            messages.append({"role": "system", "content": system_prompt})
 
-        messages.append({
-            "role": "user",
-            "content": prompt
-        })
+        messages.append({"role": "user", "content": prompt})
 
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             temperature=self.temperature,
-            max_tokens=self.max_tokens
+            max_tokens=self.max_tokens,
         )
 
         return response.choices[0].message.content

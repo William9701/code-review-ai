@@ -2,17 +2,18 @@
 Integration Test - Complete PR Analysis Flow Simulation
 This simulates the entire flow without Docker
 """
-import sys
+
 import os
-import json
-from datetime import datetime
+import sys
 
 # Add paths
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'services', 'analysis-engine'))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "services", "analysis-engine")
+)
 
 from analyzers.python_analyzer import PythonAnalyzer
-from analyzers.typescript_analyzer import TypeScriptAnalyzer
 from analyzers.security_analyzer import SecurityAnalyzer
+from analyzers.typescript_analyzer import TypeScriptAnalyzer
 
 print("=" * 80)
 print("CodeReview AI - Integration Test")
@@ -40,7 +41,7 @@ def authenticate_user(username, password):
     cursor.execute(query)
 
     return True
-"""
+""",
     },
     {
         "path": "backend/helpers.py",
@@ -63,7 +64,7 @@ def process_data(a, b, c, d, e, f, g, h):
         pass
 
     return result
-"""
+""",
     },
     {
         "path": "frontend/api.ts",
@@ -83,8 +84,8 @@ async function fetchUserData(userId: any) {
 function processHtml(html: string) {
     document.getElementById('content').innerHTML = html;
 }
-"""
-    }
+""",
+    },
 ]
 
 # Initialize analyzers
@@ -94,13 +95,7 @@ security_analyzer = SecurityAnalyzer()
 
 # Analysis results
 all_issues = []
-stats = {
-    "critical": 0,
-    "high": 0,
-    "medium": 0,
-    "low": 0,
-    "info": 0
-}
+stats = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
 
 print("Analyzing PR files...")
 print("-" * 80)
@@ -111,21 +106,23 @@ for file_data in pr_files:
     issues = []
 
     # Run language-specific analyzer
-    if file_data['language'] == 'python':
-        issues.extend(python_analyzer.analyze(file_data['path'], file_data['content']))
-    elif file_data['language'] == 'typescript':
-        issues.extend(typescript_analyzer.analyze(file_data['path'], file_data['content']))
+    if file_data["language"] == "python":
+        issues.extend(python_analyzer.analyze(file_data["path"], file_data["content"]))
+    elif file_data["language"] == "typescript":
+        issues.extend(
+            typescript_analyzer.analyze(file_data["path"], file_data["content"])
+        )
 
     # Always run security analyzer
-    security_issues = security_analyzer.analyze(file_data['path'], file_data['content'])
+    security_issues = security_analyzer.analyze(file_data["path"], file_data["content"])
     issues.extend(security_issues)
 
     print(f"  Found {len(issues)} issues")
 
     for issue in issues:
-        issue['file'] = file_data['path']
+        issue["file"] = file_data["path"]
         all_issues.append(issue)
-        stats[issue['severity']] += 1
+        stats[issue["severity"]] += 1
 
 print()
 print("=" * 80)
@@ -147,15 +144,15 @@ print("=" * 80)
 print("Issues by Severity:")
 print("=" * 80)
 
-for severity in ['critical', 'high', 'medium', 'low', 'info']:
-    severity_issues = [i for i in all_issues if i['severity'] == severity]
+for severity in ["critical", "high", "medium", "low", "info"]:
+    severity_issues = [i for i in all_issues if i["severity"] == severity]
     if severity_issues:
         print(f"\n[{severity.upper()}] - {len(severity_issues)} issues:")
         for issue in severity_issues:
             print(f"  {issue['file']}:{issue['line_start']}")
             print(f"    {issue['title']}")
             print(f"    {issue['description']}")
-            if issue.get('metadata', {}).get('cwe'):
+            if issue.get("metadata", {}).get("cwe"):
                 print(f"    {issue['metadata']['cwe']} - {issue['metadata']['owasp']}")
             print()
 
@@ -182,7 +179,7 @@ comment = f"""## {sample_issue['title']}
 ```
 """
 
-if sample_issue.get('metadata', {}).get('cwe'):
+if sample_issue.get("metadata", {}).get("cwe"):
     comment += f"""
 ### Security Information
 - **CWE:** {sample_issue['metadata']['cwe']}

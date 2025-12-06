@@ -1,21 +1,22 @@
 """
 LLM Service - AI-powered code analysis and suggestions
 """
+
+import json
 import os
 import sys
-import json
-from typing import Dict, Any, List, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from shared.database import get_db_context, Analysis, Issue
-from shared.messaging import get_message_queue
-from shared.logging import setup_logging, get_logger
-
 from llm_providers.anthropic_provider import AnthropicProvider
 from llm_providers.openai_provider import OpenAIProvider
+
+from shared.database import Analysis, Issue, get_db_context
+from shared.logging import get_logger, setup_logging
+from shared.messaging import get_message_queue
 
 # Setup logging
 setup_logging(service_name="llm-service")
@@ -51,10 +52,7 @@ class LLMService:
 
         logger.info(
             f"Processing analysis results with LLM",
-            extra={
-                "analysis_id": analysis_id,
-                "total_issues": total_issues
-            }
+            extra={"analysis_id": analysis_id, "total_issues": total_issues},
         )
 
         if total_issues == 0:
@@ -64,17 +62,13 @@ class LLMService:
         try:
             with get_db_context() as db:
                 # Get analysis and issues
-                analysis = db.query(Analysis).filter(
-                    Analysis.id == analysis_id
-                ).first()
+                analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
 
                 if not analysis:
                     logger.error(f"Analysis not found: {analysis_id}")
                     return
 
-                issues = db.query(Issue).filter(
-                    Issue.analysis_id == analysis_id
-                ).all()
+                issues = db.query(Issue).filter(Issue.analysis_id == analysis_id).all()
 
                 # Process issues with LLM
                 for issue in issues:
@@ -87,7 +81,9 @@ class LLMService:
 
                     if enhancement:
                         issue.explanation = enhancement.get("explanation")
-                        issue.suggested_fix = enhancement.get("suggested_fix") or issue.suggested_fix
+                        issue.suggested_fix = (
+                            enhancement.get("suggested_fix") or issue.suggested_fix
+                        )
 
                 db.commit()
 
@@ -98,14 +94,11 @@ class LLMService:
                 "github.comment.create",
                 {
                     "analysis_id": analysis_id,
-                    "pull_request_id": analysis.pull_request_id
-                }
+                    "pull_request_id": analysis.pull_request_id,
+                },
             )
 
-            logger.info(
-                f"LLM processing completed",
-                extra={"analysis_id": analysis_id}
-            )
+            logger.info(f"LLM processing completed", extra={"analysis_id": analysis_id})
 
         except Exception as e:
             logger.error(f"LLM processing failed: {e}", exc_info=True)
@@ -199,10 +192,7 @@ Be concise, educational, and actionable. Focus on WHY this matters and HOW to fi
 
         except json.JSONDecodeError:
             # Fallback: use entire response as explanation
-            return {
-                "explanation": response,
-                "suggested_fix": None
-            }
+            return {"explanation": response, "suggested_fix": None}
 
 
 def main():

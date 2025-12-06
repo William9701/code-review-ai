@@ -1,10 +1,12 @@
 """
 API Service - REST API for dashboard and code submission (MongoDB version)
 """
+
 import os
 import sys
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -13,13 +15,13 @@ from pydantic import BaseModel
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from shared.database import mongodb as db
-from shared.logging import setup_logging, get_logger
+from shared.logging import get_logger, setup_logging
 
 # Add analyzers
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "analysis-engine"))
 from analyzers.python_analyzer import PythonAnalyzer
-from analyzers.typescript_analyzer import TypeScriptAnalyzer
 from analyzers.security_analyzer import SecurityAnalyzer
+from analyzers.typescript_analyzer import TypeScriptAnalyzer
 
 # Setup logging
 setup_logging(service_name="api-service")
@@ -29,7 +31,7 @@ logger = get_logger(__name__)
 app = FastAPI(
     title="CodeReview AI - API",
     description="REST API for CodeReview AI Dashboard",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # CORS
@@ -41,11 +43,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Pydantic models
 class CodeSubmission(BaseModel):
     filename: str
     content: str
     language: str  # python, typescript, javascript
+
 
 class AnalysisResponse(BaseModel):
     analysis_id: str
@@ -57,6 +61,7 @@ class AnalysisResponse(BaseModel):
     low_issues: int
     info_issues: int
 
+
 class IssueResponse(BaseModel):
     id: str
     file_path: str
@@ -66,6 +71,7 @@ class IssueResponse(BaseModel):
     title: str
     description: str
     code_snippet: Optional[str]
+
 
 class StatsResponse(BaseModel):
     total_analyses: int
@@ -143,7 +149,9 @@ async def analyze_code(submission: CodeSubmission):
 
         # Always run security analyzer
         security_analyzer = SecurityAnalyzer()
-        all_issues.extend(security_analyzer.analyze(submission.filename, submission.content))
+        all_issues.extend(
+            security_analyzer.analyze(submission.filename, submission.content)
+        )
 
         # Save issues to database
         for issue_data in all_issues:
@@ -158,7 +166,7 @@ async def analyze_code(submission: CodeSubmission):
                 description=issue_data["description"],
                 code_snippet=issue_data.get("code_snippet"),
                 suggested_fix=issue_data.get("suggested_fix"),
-                extra_data=issue_data.get("metadata")
+                extra_data=issue_data.get("metadata"),
             )
 
         # Calculate statistics
@@ -183,7 +191,7 @@ async def analyze_code(submission: CodeSubmission):
             low_issues=low_issues,
             info_issues=info_issues,
             completed_at=end_time,
-            analysis_duration_seconds=duration
+            analysis_duration_seconds=duration,
         )
 
         logger.info(f"Analysis completed: {len(all_issues)} issues found")
@@ -196,7 +204,7 @@ async def analyze_code(submission: CodeSubmission):
             high_issues=high_issues,
             medium_issues=medium_issues,
             low_issues=low_issues,
-            info_issues=info_issues
+            info_issues=info_issues,
         )
 
     except Exception as e:
@@ -216,4 +224,5 @@ async def get_issues_by_severity():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

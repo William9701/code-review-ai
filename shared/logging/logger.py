@@ -1,12 +1,14 @@
 """
 Centralized logging configuration
 """
+
+import json
+import logging
 import os
 import sys
-import logging
-import json
 from datetime import datetime
 from typing import Any, Dict
+
 from pythonjsonlogger import jsonlogger
 
 
@@ -19,7 +21,7 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         self,
         log_record: Dict[str, Any],
         record: logging.LogRecord,
-        message_dict: Dict[str, Any]
+        message_dict: Dict[str, Any],
     ) -> None:
         """
         Add custom fields to log record
@@ -58,9 +60,7 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
 
 
 def setup_logging(
-    level: str = None,
-    service_name: str = None,
-    json_logs: bool = True
+    level: str = None, service_name: str = None, json_logs: bool = True
 ) -> logging.Logger:
     """
     Setup centralized logging configuration
@@ -74,10 +74,7 @@ def setup_logging(
         Configured root logger
     """
     # Get log level from env or parameter
-    log_level = (
-        level or
-        os.getenv("LOG_LEVEL", "INFO")
-    ).upper()
+    log_level = (level or os.getenv("LOG_LEVEL", "INFO")).upper()
 
     # Set service name
     if service_name:
@@ -102,7 +99,7 @@ def setup_logging(
     else:
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
     console_handler.setFormatter(formatter)
@@ -114,8 +111,8 @@ def setup_logging(
         extra={
             "level": log_level,
             "service": os.getenv("SERVICE_NAME", "unknown"),
-            "json_logs": json_logs
-        }
+            "json_logs": json_logs,
+        },
     )
 
     return root_logger

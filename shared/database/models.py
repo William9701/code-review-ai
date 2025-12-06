@@ -1,12 +1,23 @@
 """
 Database models for CodeReview AI Assistant
 """
+
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Optional, List
+from typing import List, Optional
+
 from sqlalchemy import (
-    Column, Integer, String, DateTime, Boolean, Text,
-    ForeignKey, JSON, Enum, Float, Index
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -17,6 +28,7 @@ Base = declarative_base()
 
 class AnalysisStatus(str, PyEnum):
     """Analysis status enumeration"""
+
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -26,6 +38,7 @@ class AnalysisStatus(str, PyEnum):
 
 class IssueSeverity(str, PyEnum):
     """Issue severity levels"""
+
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"
@@ -35,6 +48,7 @@ class IssueSeverity(str, PyEnum):
 
 class IssueCategory(str, PyEnum):
     """Issue category types"""
+
     SECURITY = "security"
     PERFORMANCE = "performance"
     CODE_QUALITY = "code_quality"
@@ -44,6 +58,7 @@ class IssueCategory(str, PyEnum):
 
 class Repository(Base):
     """GitHub repository model"""
+
     __tablename__ = "repositories"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -67,6 +82,7 @@ class Repository(Base):
 
 class PullRequest(Base):
     """GitHub pull request model"""
+
     __tablename__ = "pull_requests"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -93,9 +109,7 @@ class PullRequest(Base):
     analyses = relationship("Analysis", back_populates="pull_request")
 
     # Indexes
-    __table_args__ = (
-        Index("idx_pr_repo_number", "repository_id", "pr_number"),
-    )
+    __table_args__ = (Index("idx_pr_repo_number", "repository_id", "pr_number"),)
 
     def __repr__(self):
         return f"<PullRequest #{self.pr_number} - {self.title}>"
@@ -103,6 +117,7 @@ class PullRequest(Base):
 
 class Analysis(Base):
     """Code analysis job model"""
+
     __tablename__ = "analyses"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -133,6 +148,7 @@ class Analysis(Base):
 
 class Issue(Base):
     """Code issue/finding model"""
+
     __tablename__ = "issues"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -172,6 +188,7 @@ class Issue(Base):
 
 class AnalysisRule(Base):
     """Analysis rule configuration"""
+
     __tablename__ = "analysis_rules"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -193,6 +210,7 @@ class AnalysisRule(Base):
 
 class AuditLog(Base):
     """Audit log for tracking system events"""
+
     __tablename__ = "audit_logs"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -212,6 +230,7 @@ class AuditLog(Base):
 
 class APIKey(Base):
     """API keys for authentication"""
+
     __tablename__ = "api_keys"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -232,6 +251,7 @@ class APIKey(Base):
 
 class AnalyticsMetric(Base):
     """Analytics and metrics tracking"""
+
     __tablename__ = "analytics_metrics"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -242,9 +262,7 @@ class AnalyticsMetric(Base):
     timestamp = Column(DateTime, server_default=func.now(), index=True)
 
     # Indexes
-    __table_args__ = (
-        Index("idx_metric_name_timestamp", "metric_name", "timestamp"),
-    )
+    __table_args__ = (Index("idx_metric_name_timestamp", "metric_name", "timestamp"),)
 
     def __repr__(self):
         return f"<AnalyticsMetric {self.metric_name} - {self.metric_value}>"

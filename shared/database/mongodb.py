@@ -1,11 +1,13 @@
 """
 MongoDB connection and data access layer
 """
+
 import os
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pymongo import MongoClient
+from typing import Any, Dict, List, Optional
+
 from bson import ObjectId
+from pymongo import MongoClient
 
 # MongoDB connection
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://127.0.0.1:27017/")
@@ -99,8 +101,7 @@ def update_analysis(
         update_data["analysis_duration_seconds"] = analysis_duration_seconds
 
     analyses_collection.update_one(
-        {"_id": ObjectId(analysis_id)},
-        {"$set": update_data}
+        {"_id": ObjectId(analysis_id)}, {"$set": update_data}
     )
 
 
@@ -144,18 +145,20 @@ def get_stats() -> Dict[str, Any]:
     # Count critical issues
     critical_pipeline = [
         {"$match": {"severity": IssueSeverity.CRITICAL}},
-        {"$count": "total"}
+        {"$count": "total"},
     ]
     critical_result = list(issues_collection.aggregate(critical_pipeline))
     critical_issues = critical_result[0]["total"] if critical_result else 0
 
     # Count completed PRs (analyses)
-    prs_reviewed = analyses_collection.count_documents({"status": AnalysisStatus.COMPLETED})
+    prs_reviewed = analyses_collection.count_documents(
+        {"status": AnalysisStatus.COMPLETED}
+    )
 
     # Calculate average analysis time
     avg_pipeline = [
         {"$match": {"analysis_duration_seconds": {"$ne": None}}},
-        {"$group": {"_id": None, "avg_time": {"$avg": "$analysis_duration_seconds"}}}
+        {"$group": {"_id": None, "avg_time": {"$avg": "$analysis_duration_seconds"}}},
     ]
     avg_result = list(analyses_collection.aggregate(avg_pipeline))
     avg_analysis_time = round(avg_result[0]["avg_time"], 2) if avg_result else 0
@@ -173,18 +176,28 @@ def get_recent_analyses(limit: int = 10) -> List[Dict[str, Any]]:
     analyses = analyses_collection.find().sort("created_at", -1).limit(limit)
     result = []
     for analysis in analyses:
-        result.append({
-            "id": str(analysis["_id"]),
-            "status": analysis["status"],
-            "total_issues": analysis["total_issues"],
-            "critical_issues": analysis["critical_issues"],
-            "high_issues": analysis["high_issues"],
-            "medium_issues": analysis["medium_issues"],
-            "low_issues": analysis["low_issues"],
-            "info_issues": analysis["info_issues"],
-            "created_at": analysis["created_at"].isoformat() if analysis.get("created_at") else None,
-            "completed_at": analysis["completed_at"].isoformat() if analysis.get("completed_at") else None,
-        })
+        result.append(
+            {
+                "id": str(analysis["_id"]),
+                "status": analysis["status"],
+                "total_issues": analysis["total_issues"],
+                "critical_issues": analysis["critical_issues"],
+                "high_issues": analysis["high_issues"],
+                "medium_issues": analysis["medium_issues"],
+                "low_issues": analysis["low_issues"],
+                "info_issues": analysis["info_issues"],
+                "created_at": (
+                    analysis["created_at"].isoformat()
+                    if analysis.get("created_at")
+                    else None
+                ),
+                "completed_at": (
+                    analysis["completed_at"].isoformat()
+                    if analysis.get("completed_at")
+                    else None
+                ),
+            }
+        )
     return result
 
 
@@ -193,26 +206,26 @@ def get_issues_by_analysis(analysis_id: str) -> List[Dict[str, Any]]:
     issues = issues_collection.find({"analysis_id": analysis_id})
     result = []
     for issue in issues:
-        result.append({
-            "id": str(issue["_id"]),
-            "file_path": issue["file_path"],
-            "line_start": issue["line_start"],
-            "severity": issue["severity"],
-            "category": issue["category"],
-            "rule_id": issue["rule_id"],
-            "title": issue["title"],
-            "description": issue["description"],
-            "code_snippet": issue.get("code_snippet"),
-            "suggested_fix": issue.get("suggested_fix"),
-        })
+        result.append(
+            {
+                "id": str(issue["_id"]),
+                "file_path": issue["file_path"],
+                "line_start": issue["line_start"],
+                "severity": issue["severity"],
+                "category": issue["category"],
+                "rule_id": issue["rule_id"],
+                "title": issue["title"],
+                "description": issue["description"],
+                "code_snippet": issue.get("code_snippet"),
+                "suggested_fix": issue.get("suggested_fix"),
+            }
+        )
     return result
 
 
 def get_issues_by_severity() -> Dict[str, int]:
     """Get issue counts by severity"""
-    pipeline = [
-        {"$group": {"_id": "$severity", "count": {"$sum": 1}}}
-    ]
+    pipeline = [{"$group": {"_id": "$severity", "count": {"$sum": 1}}}]
     results = issues_collection.aggregate(pipeline)
 
     severity_counts = {

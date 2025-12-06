@@ -1,15 +1,19 @@
 """
 Unit tests for code analyzers
 """
-import sys
+
 import os
+import sys
 
 # Add paths
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'services', 'analysis-engine'))
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(__file__), "..", "..", "services", "analysis-engine"),
+)
 
 from analyzers.python_analyzer import PythonAnalyzer
-from analyzers.typescript_analyzer import TypeScriptAnalyzer
 from analyzers.security_analyzer import SecurityAnalyzer
+from analyzers.typescript_analyzer import TypeScriptAnalyzer
 
 
 def test_python_analyzer_complexity():
@@ -61,7 +65,7 @@ def complex_function(a, b, c, d):
 """
     issues = analyzer.analyze("test.py", code)
     # Should detect high complexity
-    assert any(i['rule_id'] == 'python_high_complexity' for i in issues)
+    assert any(i["rule_id"] == "python_high_complexity" for i in issues)
     print("[PASS] Python complexity detection")
 
 
@@ -74,7 +78,7 @@ def func(a, b, c, d, e, f, g):
 """
     issues = analyzer.analyze("test.py", code)
     # Should detect too many parameters
-    assert any(i['rule_id'] == 'python_too_many_parameters' for i in issues)
+    assert any(i["rule_id"] == "python_too_many_parameters" for i in issues)
     print("[PASS] Python parameter count detection")
 
 
@@ -84,7 +88,7 @@ def test_typescript_analyzer_any_type():
     code = "function test(data: any) { return data; }"
     issues = analyzer.analyze("test.ts", code)
     # Should detect 'any' usage
-    assert any(i['rule_id'] == 'typescript_any_type' for i in issues)
+    assert any(i["rule_id"] == "typescript_any_type" for i in issues)
     print("[PASS] TypeScript 'any' type detection")
 
 
@@ -94,7 +98,7 @@ def test_typescript_analyzer_console():
     code = "console.log('debug');"
     issues = analyzer.analyze("test.ts", code)
     # Should detect console.log
-    assert any(i['rule_id'] == 'typescript_console_log' for i in issues)
+    assert any(i["rule_id"] == "typescript_console_log" for i in issues)
     print("[PASS] TypeScript console.log detection")
 
 
@@ -107,8 +111,8 @@ cursor.execute(query)
 """
     issues = analyzer.analyze("test.py", code)
     # Should detect SQL injection
-    assert any(i['rule_id'] == 'security_sql_injection' for i in issues)
-    assert any(i['severity'] == 'critical' for i in issues)
+    assert any(i["rule_id"] == "security_sql_injection" for i in issues)
+    assert any(i["severity"] == "critical" for i in issues)
     print("[PASS] SQL injection detection")
 
 
@@ -118,8 +122,8 @@ def test_security_analyzer_hardcoded_secret():
     code = 'api_key = "sk-1234567890abcdef"'
     issues = analyzer.analyze("test.py", code)
     # Should detect hardcoded secret
-    assert any(i['rule_id'] == 'security_hardcoded_secret' for i in issues)
-    assert any(i['severity'] == 'critical' for i in issues)
+    assert any(i["rule_id"] == "security_hardcoded_secret" for i in issues)
+    assert any(i["severity"] == "critical" for i in issues)
     print("[PASS] Hardcoded secret detection")
 
 
@@ -129,7 +133,7 @@ def test_security_analyzer_weak_crypto():
     code = "hash = hashlib.md5(data).hexdigest()"
     issues = analyzer.analyze("test.py", code)
     # Should detect weak crypto
-    assert any(i['rule_id'] == 'security_weak_crypto' for i in issues)
+    assert any(i["rule_id"] == "security_weak_crypto" for i in issues)
     print("[PASS] Weak cryptography detection")
 
 
@@ -139,7 +143,7 @@ def test_security_analyzer_xss():
     code = "element.innerHTML = userInput;"
     issues = analyzer.analyze("test.js", code)
     # Should detect XSS
-    assert any(i['rule_id'] == 'security_xss' for i in issues)
+    assert any(i["rule_id"] == "security_xss" for i in issues)
     print("[PASS] XSS vulnerability detection")
 
 
@@ -154,9 +158,9 @@ query = "SELECT * FROM users WHERE id = " + user_id
 
     # Check metadata exists
     for issue in issues:
-        assert 'metadata' in issue
-        assert 'cwe' in issue['metadata']
-        assert 'owasp' in issue['metadata']
+        assert "metadata" in issue
+        assert "cwe" in issue["metadata"]
+        assert "owasp" in issue["metadata"]
 
     print("[PASS] CWE/OWASP mapping")
 

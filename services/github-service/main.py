@@ -1,21 +1,20 @@
 """
 GitHub Service - Handles GitHub API interactions
 """
+
 import os
 import sys
-import json
 import time
-from typing import Dict, Any, List
-from datetime import datetime
-import jwt
-from github import Github, GithubIntegration, Auth
+from typing import Any, Dict, List
+
+from github import Auth, Github, GithubIntegration
 
 # Add shared modules to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from shared.database import get_db_context, Analysis, Issue, PullRequest, Repository
+from shared.database import Analysis, Issue, PullRequest, Repository, get_db_context
+from shared.logging import get_logger, setup_logging
 from shared.messaging import get_message_queue
-from shared.logging import setup_logging, get_logger
 
 # Setup logging
 setup_logging(service_name="github-service")
@@ -36,10 +35,7 @@ class GitHubService:
 
         self.private_key = private_key
         self.integration = GithubIntegration(
-            auth=Auth.AppAuth(
-                self.app_id,
-                self.private_key
-            )
+            auth=Auth.AppAuth(self.app_id, self.private_key)
         )
 
     def get_installation_client(self, installation_id: int) -> Github:
@@ -67,43 +63,40 @@ class GitHubService:
 
         logger.info(
             f"Posting review comments",
-            extra={
-                "analysis_id": analysis_id,
-                "pull_request_id": pull_request_id
-            }
+            extra={"analysis_id": analysis_id, "pull_request_id": pull_request_id},
         )
 
         try:
             with get_db_context() as db:
                 # Get analysis, PR, and repository
-                analysis = db.query(Analysis).filter(
-                    Analysis.id == analysis_id
-                ).first()
+                analysis = db.query(Analysis).filter(Analysis.id == analysis_id).first()
 
                 if not analysis:
                     logger.error(f"Analysis not found: {analysis_id}")
                     return
 
-                pull_request = db.query(PullRequest).filter(
-                    PullRequest.id == pull_request_id
-                ).first()
+                pull_request = (
+                    db.query(PullRequest)
+                    .filter(PullRequest.id == pull_request_id)
+                    .first()
+                )
 
                 if not pull_request:
                     logger.error(f"Pull request not found: {pull_request_id}")
                     return
 
-                repository = db.query(Repository).filter(
-                    Repository.id == pull_request.repository_id
-                ).first()
+                repository = (
+                    db.query(Repository)
+                    .filter(Repository.id == pull_request.repository_id)
+                    .first()
+                )
 
                 if not repository:
                     logger.error(f"Repository not found: {pull_request.repository_id}")
                     return
 
                 # Get issues to comment on
-                issues = db.query(Issue).filter(
-                    Issue.analysis_id == analysis_id
-                ).all()
+                issues = db.query(Issue).filter(Issue.analysis_id == analysis_id).all()
 
                 # Get GitHub client
                 gh = self.get_installation_client(repository.installation_id)
@@ -126,7 +119,7 @@ class GitHubService:
                             body=comment_body,
                             commit=pr.head,
                             path=issue.file_path,
-                            line=issue.line_start
+                            line=issue.line_start,
                         )
 
                         # Save comment ID
@@ -152,8 +145,8 @@ class GitHubService:
                     f"Posted {comments_posted} review comments",
                     extra={
                         "analysis_id": analysis_id,
-                        "comments_posted": comments_posted
-                    }
+                        "comments_posted": comments_posted,
+                    },
                 )
 
         except Exception as e:
@@ -174,7 +167,7 @@ class GitHubService:
             "high": "⚠️",
             "medium": "⚡",
             "low": "💡",
-            "info": "ℹ️"
+            "info": "ℹ️",
         }
 
         category_emoji = {
@@ -182,7 +175,7 @@ class GitHubService:
             "performance": "⚡",
             "code_quality": "✨",
             "best_practices": "👍",
-            "maintainability": "🔧"
+            "maintainability": "🔧",
         }
 
         emoji = severity_emoji.get(issue.severity.value, "")
@@ -213,10 +206,7 @@ class GitHubService:
         return comment
 
     def _post_summary_comment(
-        self,
-        pr,
-        analysis: Analysis,
-        issues: List[Issue]
+        self, pr, analysis: Analysis, issues: List[Issue]
     ) -> None:
         """
         Post summary comment on PR
@@ -247,7 +237,9 @@ class GitHubService:
                     categories[cat] = categories.get(cat, 0) + 1
 
                 summary += "### Issues by Category\n"
-                for cat, count in sorted(categories.items(), key=lambda x: x[1], reverse=True):
+                for cat, count in sorted(
+                    categories.items(), key=lambda x: x[1], reverse=True
+                ):
                     summary += f"- {cat.replace('_', ' ').title()}: {count}\n"
 
                 summary += "\n"

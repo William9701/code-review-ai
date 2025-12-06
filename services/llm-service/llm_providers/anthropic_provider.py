@@ -1,8 +1,10 @@
 """
 Anthropic Claude LLM Provider
 """
+
 import os
 from typing import Optional
+
 import anthropic
 
 
@@ -32,18 +34,13 @@ class AnthropicProvider:
         Returns:
             Generated response
         """
-        messages = [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
+        messages = [{"role": "user", "content": prompt}]
 
         kwargs = {
             "model": self.model,
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
-            "messages": messages
+            "messages": messages,
         }
 
         if system_prompt:
